@@ -3,12 +3,11 @@ import json
 from tkinter import Tk, TclError
 import re
 import time
+import sys
 from colorama import init, deinit, Fore, Back, Style
 from currency import (CURRENCY, OILS, CATALYSTS, FRAGMENTS_AND_SETS, INCUBATORS, SCARABS, RESONATORS,
 						FOSSILS, VIALS, ESSENCES, DIV_CARDS)
 
-# Current Leagues. Not used.
-leagues = requests.get(url="https://www.pathofexile.com/api/trade/data/leagues").json()
 # All available stats on items.
 stats = requests.get(url="https://www.pathofexile.com/api/trade/data/stats").json()
 
@@ -16,6 +15,16 @@ stats = requests.get(url="https://www.pathofexile.com/api/trade/data/stats").jso
 IG_CURRENCY = [CURRENCY, OILS, CATALYSTS, FRAGMENTS_AND_SETS, INCUBATORS, SCARABS, RESONATORS,
 				FOSSILS, VIALS, ESSENCES, DIV_CARDS]
 
+def does_league_exists(user_league='Metamorph'):
+	leagues = requests.get(url="https://www.pathofexile.com/api/trade/data/leagues").json()
+	filtered_leagues = list(filter(lambda x: x['id'] == user_league, leagues['result']))
+	if len(filtered_leagues) != 1:
+		print("Could not find given league. Exiting")
+		print(leagues)
+		return False
+	else:
+		print(f'Using league : {user_league}')
+		return True
 
 def parse_item_info(text):
 	"""
@@ -410,6 +419,7 @@ def watch_clipboard():
 
 				if info:
 					# Uniques, only search by corrupted status, links, and name.
+					print(f'[-] Requesting in {league} league')
 					if (info.get('rarity') == 'Unique') and (info.get('itype') != "Metamorph"):
 						print(f'[*] Found Unique item in clipboard: {info["name"]} {info["itype"]}')
 						base = f'Only showing results that are: '
@@ -424,15 +434,15 @@ def watch_clipboard():
 						print("[-]", base)
 
 						trade_info = query_trade(**{k:v for k, v in info.items() if k in ('name', 'links',
-								'corrupted', 'rarity')})
+								'corrupted', 'rarity')}, league=league)
 
 					elif info['itype'] == 'Currency':
 						print(f'[-] Found currency {info["name"]} in clipboard')
-						trade_info = query_exchange(info['name'])
+						trade_info = query_exchange(info['name'], league=league)
 
 					elif info['itype'] == 'Divination Card':
 						print(f'[-] Found Divination Card {info["name"]}')
-						trade_info = query_exchange(info['name'])
+						trade_info = query_exchange(info['name'], league=league)
 
 					else:
 						# Do intensive search.
@@ -448,7 +458,6 @@ def watch_clipboard():
 					if trade_info:
 						# If more than 1 result, assemble price list.
 						if len(trade_info) > 1:
-							# Modify data to usable status.
 							prices = [x['listing']['price'] for x in trade_info]
 							prices = ['%(amount)s%(currency)s' % x for x in prices]
 
@@ -482,8 +491,16 @@ def watch_clipboard():
 
 
 if __name__ == "__main__":
-	init(autoreset=True) #Colorama
-	root = Tk()
-	root.withdraw()
-	watch_clipboard()
-	deinit() #Colorama
+	if len(sys.argv) >= 2:
+		league = sys.argv[1]
+	else:
+		league = "Metamorph"
+	if does_league_exists(league):
+		init(autoreset=True) #Colorama
+		root = Tk()
+		root.withdraw()
+		watch_clipboard()
+		deinit() #Colorama
+		sys.exit(0)
+	else:
+		sys.exit(1)
