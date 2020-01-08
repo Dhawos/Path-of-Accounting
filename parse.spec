@@ -4,7 +4,7 @@ block_cipher = None
 
 
 a = Analysis(['parse.py'],
-             pathex=['/home/ethck/Documents/Projects/poeTradeLookup'],
+             pathex=['C:\\Users\\Darius\\Documents\\poeTradeLookup'],
              binaries=[],
              datas=[],
              hiddenimports=[],
